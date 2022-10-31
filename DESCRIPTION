@@ -1,0 +1,19 @@
+Package: fCatVis
+Version: 0.0.1
+Date: 2022-10-26
+Title: fCatVis
+Authors@R: c(
+    person("Vinh", "Tran", role = c("aut", "cre"), email = "tran@bio.uni-frankfurt.de"))
+Description: Tool for visualising fCAT output
+URL: https://github.com/trvinh/fCatVis/
+BugReports: https://github.com/trvinh/fCatVis/issues
+License: GPL3 + file LICENSE
+Depends: R (>= 4.2.0)
+Encoding: UTF-8
+biocViews: Software, Visualization, DataRepresentation, MultipleComparison, FunctionalPrediction
+Imports:
+    data.table, ggplot2, gridExtra, shiny, shinyBS, shinyFiles, shinyjs, 
+    shinyalert, shinythemes, stringr, plotly
+RoxygenNote: 7.2.0
+Suggests: knitr, rmarkdown, testthat
+VignetteBuilder: knitr
