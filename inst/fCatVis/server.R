@@ -110,7 +110,8 @@ shinyServer(function(input, output, session) {
         } else if (input$inputType == "Folder") {
             allFiles <- list.files(getFcatDir(), pattern = ".txt")
             fcatFile <- paste0(
-                getFcatDir(), "/", allFiles[grep(input$specID, allFiles)]
+                getFcatDir(), "/", 
+                allFiles[grep(paste0("^", input$specID), allFiles)]
             )
             outDf <- getReportDf(fcatFile, input$specID)
         }

@@ -133,24 +133,30 @@ createSummaryPlot <- function(
         )
     })
 
-    # output$downloadSummary <- downloadHandler(
-    #     filename = function() {
-    #         c("detailedPlot.pdf")
-    #     },
-    #     content = function(file) {
-    #         g <- summaryPlot(data())
-    #         ggsave(
-    #             file,
-    #             plot = g,
-    #             width = 800 * 0.056458333,
-    #             height = plotHeight * 0.056458333,
-    #             units = "cm",
-    #             dpi = 300,
-    #             device = "pdf",
-    #             limitsize = FALSE
-    #         )
-    #     }
-    # )
+    output$downloadSummary <- downloadHandler(
+        filename = function() {
+            c("plot.html")
+        },
+        content = function(file) {
+            # g <- summaryPlot(data())
+            m <- createMissingPlot(
+                data(), input$summaryText, input$summaryValue
+            )
+            f <- createFoundPlot(data(), input$summaryText, input$summaryValue)
+            htmlwidgets::saveWidget(as_widget(m), "missingPlot.html")
+            htmlwidgets::saveWidget(as_widget(f), "foundPlot.html")
+            # ggsave(
+            #     file,
+            #     plot = g,
+            #     width = 800 * 0.056458333,
+            #     height = plotHeight * 0.056458333,
+            #     units = "cm",
+            #     dpi = 300,
+            #     device = "pdf",
+            #     limitsize = FALSE
+            # )
+        }
+    )
 }
 
 

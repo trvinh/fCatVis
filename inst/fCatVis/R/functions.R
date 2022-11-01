@@ -131,7 +131,7 @@ getReportDf <- function (inputFile = NULL, specID = NULL) {
     df <- read.csv(
         inputFile, header = TRUE, sep = "\t", stringsAsFactors = FALSE
     )
-    return(df[grep(specID, df$genomeID),])
+    return(df[grep(paste0("^", specID), df$genomeID),])
 }
 
 
