@@ -66,8 +66,16 @@ shinyServer(function(input, output, session) {
             conditionalPanel(
                 condition = "input.filter == 'Yes'",
                 numericInput(
-                    "diffCutoff",
+                    "diffCutoffPercent",
                     "Difference threshold (%)",
+                    min = 0,
+                    max = 100,
+                    step = 1,
+                    value = 10
+                ),
+                numericInput(
+                    "diffCutoff",
+                    "Min difference count",
                     min = 0,
                     max = 100,
                     step = 1,
@@ -78,7 +86,16 @@ shinyServer(function(input, output, session) {
         )
     })
     
-    # render species IDs ==================================================
+    # render species IDs =======================================================
+    filteredSpecDf <- reactive({
+        req(input$filter)
+        req(getFcatDir())
+        req(input$diffCutoffPercent)
+        files <- list.files(getFcatDir(), pattern = ".report_summary.txt")
+        fullFiles <- paste0(getFcatDir(), "/", files)
+        return(filterSpec(fullFiles, input$diffCutoffPercent, input$diffCutoff))
+    })
+    
     output$specID.ui <- renderUI({
         req(input$filter)
         if (input$inputType == "File") req(getFcatFile())
@@ -88,9 +105,8 @@ shinyServer(function(input, output, session) {
         if (input$filter == "No") {
             specIDs <- getSpecIDs(input$inputType, getFcatFile(), getFcatDir())
         } else {
-            files <- list.files(getFcatDir(), pattern = ".report_summary.txt")
-            fullFiles <- paste0(getFcatDir(), "/", files)
-            specIDs <- filterSpec(fullFiles, input$diffCutoff)
+            filteredSpec <- filteredSpecDf()$spec
+            specIDs <- sort(filteredSpec[!duplicated(filteredSpec)])
         }
         
         selectInput(
@@ -119,8 +135,16 @@ shinyServer(function(input, output, session) {
         return(outDf)
     })
     
+    diffDf <- reactive({
+        req(input$doPlot)
+        req(input$specID)
+        filteredSpecDf <- filteredSpecDf()
+        return(filteredSpecDf[filteredSpecDf$spec == input$specID,])
+    })
+    
     callModule(
         createSummaryPlot, "summaryPlot",
-        data = reportDf
+        data = reportDf,
+        diffDf = diffDf
     )
 })

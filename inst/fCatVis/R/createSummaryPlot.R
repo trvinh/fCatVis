@@ -57,19 +57,36 @@ createSummaryPlotUI <- function(id) {
                 )
             )
         ),
+        
         uiOutput(ns("summaryPlot.ui")),
         downloadButton(ns("downloadSummary"), "Download plot",
                        class = "butDL"),
+        # verbatimTextOutput(outputId = ns("clicked_point")),
         hr(),
         
-        radioButtons(
-            ns("tableType"), 
-            "Type", 
-            choices = c("Count", "Percentage"),
-            selected = "Count", inline = TRUE
+        tableOutput(ns("diff.table")),
+        br(),
+        
+        column(
+            6,
+            radioButtons(
+                ns("tableFilter"),
+                "Show",
+                choices = c("All", "Only different assessments"),
+                selected = "All", inline = TRUE
+            )
+        ),
+        column(
+            6,
+            radioButtons(
+                ns("tableType"),
+                "Type",
+                choices = c("Count", "Percentage"),
+                selected = "Count", inline = TRUE
+            )
         ),
         tableOutput(ns("summary.table")),
-        
+
         tags$head(
             tags$style(HTML(
                 ".butDL{background-color:#476ba3;} .butDL{color: white;}"))
@@ -77,44 +94,22 @@ createSummaryPlotUI <- function(id) {
     )
 }
 
-createSummaryPlot <- function(
-    input, output, session, data
-){
+createPlot <- function(dt, dp) {
+    plot_ly(dt, x=dt$index, y=dt$data,mode = "lines") %>%
+        add_trace(x = dp$index, y=dp$data, mode = "markers") %>%
+        layout(title="Plotly_click Test")
+}
 
+createSummaryPlot <- function(
+    input, output, session, data, diffDf
+){
     # render detailed plot -----------------------------------------------------
     output$missingPlot <- renderPlotly({
         createMissingPlot(data(), input$summaryText, input$summaryValue)
     })
-    
+
     output$foundPlot <- renderPlotly({
         createFoundPlot(data(), input$summaryText, input$summaryValue)
-    })
-    
-    output$summary.table <- renderTable({
-        df <- data()
-        df$mode[df$mode == "mode_1"] <- "Strict"
-        df$mode[df$mode == "mode_2"] <- "Reference"
-        df$mode[df$mode == "mode_3"] <- "Relaxed"
-        df$mode[df$mode == "mode_4"] <- "Length"
-        df <- df[
-            ,c(
-                "genomeID", "mode", "found", "similar", "dissimilar", 
-                "duplicated", "missing", "ignored", "total"
-            )
-        ]
-        if (input$tableType == "Count") {
-            return(df)
-        } else {
-            df$similar <- df$similar/df$found
-            df$dissimilar <- df$dissimilar/df$found
-            df$duplicated <- df$duplicated/df$found
-            df$found <- df$found/df$total
-            df$missing <- df$missing/df$total
-            df$ignored <- df$ignored/df$total
-            df$total <- 1
-            return(df)
-        }
-        
     })
 
     output$summaryPlot.ui <- renderUI({
@@ -132,6 +127,14 @@ createSummaryPlot <- function(
             )
         )
     })
+
+    # output$clicked_point <- renderTable({
+    #     d <- event_data("plotly_click", source = "missingPlot")
+    #     print(d)
+    #     d_save <- d$pointNumber[1]+1
+    #     print(d_save)
+    #     data.frame(d_save)
+    # })
 
     output$downloadSummary <- downloadHandler(
         filename = function() {
@@ -157,6 +160,51 @@ createSummaryPlot <- function(
             # )
         }
     )
+    
+    output$diff.table <- renderTable({
+        df <- diffDf()
+        colnames(df) <- c(
+            "Species", "Difference between datasets (%)", "Assessment type"
+        )
+        if (nrow(df) > 0) {
+            return(df[,c("Assessment type", "Difference between datasets (%)")])
+        } else {
+            return(NULL)
+        }
+    })
+    
+    output$summary.table <- renderTable({
+        df <- data()
+        df$mode[df$mode == "mode_1"] <- "Strict"
+        df$mode[df$mode == "mode_2"] <- "Reference"
+        df$mode[df$mode == "mode_3"] <- "Relaxed"
+        df$mode[df$mode == "mode_4"] <- "Length"
+        df <- df[
+            ,c(
+                "genomeID", "mode", "found", "similar", "dissimilar",
+                "duplicated", "missing", "ignored", "total"
+            )
+        ]
+        selectedType <- unique(diffDf()$type)
+        
+        if (input$tableType == "Percentage") {
+            df$similar <- df$similar/df$found
+            df$dissimilar <- df$dissimilar/df$found
+            df$duplicated <- df$duplicated/df$found
+            df$found <- df$found/df$total
+            df$missing <- df$missing/df$total
+            df$ignored <- df$ignored/df$total
+            df$total <- 1
+        }
+        
+        if (input$tableFilter == "All") {
+            return(df)
+        } else {
+            if (length(selectedType) > 0) {
+                return(df[, c("genomeID","mode", selectedType, "total")])
+            } else return(NULL)
+        }
+    })
 }
 
 
@@ -196,10 +244,10 @@ createMissingPlot <- function (df = NULL, textSize = 11, valueSize = 3){
         ) +
         coord_flip()
     return(
-        ggplotly(missing_plot) 
+        ggplotly(missing_plot, source = "missingPlot") 
         %>% layout(
             legend = list(orientation = "h", x = 0, y = -0.1)
-        ) %>% reverse_legend_labels()
+        ) %>% reverse_legend_labels() %>% event_register("plotly_click")
     )
 }
 
@@ -248,10 +296,10 @@ createFoundPlot <- function (df = NULL, textSize = 11, valueSize = 3){
         coord_flip()
 
     return(
-        ggplotly(found_plot) 
+        ggplotly(found_plot, source = "foundPlot") 
         %>% layout(
             legend = list(orientation = "h", x = 0, y = -0.3)
-        ) %>% reverse_legend_labels()
+        ) %>% reverse_legend_labels() %>% event_register("plotly_click")
     )
 }
 

@@ -65,7 +65,9 @@ getSpecIDs <- function (inputType = NULL, fcatFile = NULL, fcatDir = NULL) {
 }
 
 
-getDiffAssessment <- function (fullDf = NULL, type = "similar", cutoff = 10) {
+getDiffAssessment <- function (
+        fullDf = NULL, type = "similar", cutoff = 10, minDiffCount = 10
+) {
     if (is.null(fullDf)) stop("Input df is null!")
     if (type == "similar") {
         maxDf <- aggregate(
@@ -94,19 +96,34 @@ getDiffAssessment <- function (fullDf = NULL, type = "similar", cutoff = 10) {
             fullDf$missing, 
             by = list(spec = fullDf$spec, mode = fullDf$mode), FUN = min
         )
+    } else if (type == "duplicated") {
+        maxDf <- aggregate(
+            fullDf$duplicated, 
+            by = list(spec = fullDf$spec, mode = fullDf$mode), FUN = max
+        )
+        minDf <- aggregate(
+            fullDf$duplicated, 
+            by = list(spec = fullDf$spec, mode = fullDf$mode), FUN = min
+        )
     }
     colnames(maxDf) <- c("spec", "mode", "max")
     colnames(minDf) <- c("spec", "mode", "min")
-    similarDf <- merge(maxDf, minDf, by = c("spec", "mode"))
-    similarDf$diff <- 100 - round((similarDf$min/similarDf$max)*100, 0)
-    filteredSimilar <- similarDf[similarDf$diff >= cutoff,]$spec
-    filteredSimilar <- filteredSimilar[!duplicated(filteredSimilar)]
-    if (length(filteredSimilar) > 0) {
-        return(filteredSimilar[!is.na(filteredSimilar)])
+    commDf <- merge(maxDf, minDf, by = c("spec", "mode"))
+    commDf$diff <- 100 - round((commDf$min/commDf$max)*100, 0)
+    commDf$diffCount <- abs(commDf$max  - commDf$min)
+    filteredDf <- commDf[
+        commDf$diff >= cutoff & commDf$diffCount >= minDiffCount, 
+        c("spec", "diff")
+    ]
+    finalDf <- aggregate(filteredDf$diff, by = list(filteredDf$spec), max)
+    colnames(finalDf) <- c("spec", "diff")
+    finalDf$type <- type
+    if (nrow(finalDf) > 0) {
+        return(finalDf)
     } else (return(NULL))
 }
 
-filterSpec <- function (inputFiles = NULL, cutoff = 10) {
+filterSpec <- function (inputFiles = NULL, cutoff = 10, minDiffCount = 10) {
     if (is.null(inputFiles)) stop("No input files given!")
     fullDf <- do.call(
         rbind, lapply(
@@ -116,18 +133,24 @@ filterSpec <- function (inputFiles = NULL, cutoff = 10) {
         )
     )
     fullDf$spec <- str_split_fixed(fullDf$genomeID, "@", 2)[,1]
-    missingIds <- getDiffAssessment(fullDf, "missing", cutoff)
-    similarIds <- getDiffAssessment(fullDf, "similar", cutoff)
-    dissimilarIds <- getDiffAssessment(fullDf, "dissimilar", cutoff)
-    filteredIds <- c(missingIds, similarIds, dissimilarIds)
-    return(sort(filteredIds[!duplicated(filteredIds)]))
+    missingDf <- getDiffAssessment(fullDf, "missing", cutoff, minDiffCount)
+    similarDf <- getDiffAssessment(fullDf, "similar", cutoff, minDiffCount)
+    dissimilarDf <- getDiffAssessment(
+        fullDf, "dissimilar", cutoff, minDiffCount
+    )
+    duplicatedDf <- getDiffAssessment(
+        fullDf, "duplicated", cutoff, minDiffCount
+    )
+    filteredDf <- rbind(
+        similarDf, dissimilarDf, duplicatedDf, missingDf
+    )
+    return(filteredDf)
 }
 
 
 getReportDf <- function (inputFile = NULL, specID = NULL) {
     if (is.null(inputFile)) stop("No infile given!")
     if (is.null(specID)) stop("Species not specified!")
-    
     df <- read.csv(
         inputFile, header = TRUE, sep = "\t", stringsAsFactors = FALSE
     )

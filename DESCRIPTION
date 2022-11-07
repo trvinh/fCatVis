@@ -1,13 +1,13 @@
 Package: fCatVis
 Version: 0.0.1
-Date: 2022-10-26
+Date: 2022-11-07
 Title: fCatVis
 Authors@R: c(
     person("Vinh", "Tran", role = c("aut", "cre"), email = "tran@bio.uni-frankfurt.de"))
-Description: Tool for visualising fCAT output
+Description: Tool for visualising fCAT output and comparing the completeness assessment between different data sets.
 URL: https://github.com/trvinh/fCatVis/
 BugReports: https://github.com/trvinh/fCatVis/issues
-License: GPL3 + file LICENSE
+License: GPL-3 + file LICENSE
 Depends: R (>= 4.2.0)
 Encoding: UTF-8
 biocViews: Software, Visualization, DataRepresentation, MultipleComparison, FunctionalPrediction
