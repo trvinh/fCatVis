@@ -25,7 +25,8 @@ There are 2 kinds of inputs can be uploaded into fCatVis:
 - A folder containing several summary reports. Each file has to be named using this format `<species_name>.report_summary.txt` (e.g.: HUMAN.report_summary.txt; CIONA.report_summary.txt; ...)
 
 ## Screenshot
-<img width="1292" alt="image" src="https://user-images.githubusercontent.com/19269760/183078583-a973d96b-4a62-49d7-8a79-408521c7add3.png">
+
+<img width="1292" alt="image" src="https://user-images.githubusercontent.com/19269760/200419308-f4c70627-ad95-4be8-85f3-c97d8aaacca6.png">
 
 ## Contact
 
