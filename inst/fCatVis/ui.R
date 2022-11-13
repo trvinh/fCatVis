@@ -14,7 +14,7 @@ shinyUI(
             fluid = TRUE,
             position = "fixed-top",
             tabPanel(
-                "Playground",
+                "Main",
                 sidebarPanel(
                     width = 3,
                     selectInput(
@@ -49,37 +49,23 @@ shinyUI(
                     br(),
                     uiOutput("filter.ui"),
                     uiOutput("specID.ui"),
-                    bsButton("doPlot", "Plot", style = "info")
+                    bsButton("doPlot", "Plot", style = "info"),
+                    hr(),
+                    conditionalPanel(
+                        condition = "input.filter == 'Yes'",
+                        bsButton(
+                            "doPP", "Submit to PhyloProfile", style = "warning", 
+                            icon = icon("share")
+                        )
+                    ),
                 ),
                 mainPanel(
-                    # fluidRow(
-                    #     column(
-                    #         2,
-                    #         createPlotSize("archiHeight", "Plot height(px)",400)
-                    #     ),
-                    #     column(
-                    #         2,
-                    #         createPlotSize("archiWidth", "Plot width(px)", 800)
-                    #     ),
-                    #     column(
-                    #         2,
-                    #         createTextSize(
-                    #             "titleArchiSize", "Title size(px)", 14, 100
-                    #         )
-                    #     ),
-                    #     column(
-                    #         2,
-                    #         createTextSize(
-                    #             "labelArchiSize", "DomainID size(px)", 12, 150
-                    #         )
-                    #     )
-                    # ),
-                    # uiOutput("domainPlot.ui"),
                     createSummaryPlotUI("summaryPlot")
-                    # downloadButton("archiDownload", "Download plot", class = "butDL"),
-                    # hr(),
-                    # tableOutput("domainTable")
                 )
+            ),
+            tabPanel(
+                "PhyloProfile",
+                phyloprofileLiteUI("phyloprofileLite")
             )
         )
     )

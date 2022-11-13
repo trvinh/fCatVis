@@ -2,9 +2,9 @@ source("R/functions.R")
 
 # List of dependent packages --------------------------------------------------
 packages <- c(
-    "data.table", "ggplot2", "gridExtra",
+    "data.table", "dplyr", "ggplot2", "grid", "gridExtra",
     "shiny", "shinyBS", "shinyFiles", "shinyjs", "shinyalert", "shinythemes",
-    "stringr", "plotly"
+    "stringr", "plotly", "PhyloProfile"
 )
 
 # Load packages

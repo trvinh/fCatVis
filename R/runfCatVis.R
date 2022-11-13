@@ -1,9 +1,11 @@
 #' Run fCatVis app
 #' @export
 #' @return A shiny application
+#' @rawNamespace import(dplyr, except = c(last, first, between, combine))
 #' @import data.table
 #' @rawNamespace import(ggplot2, except = last_plot)
 #' @import gridExtra
+#' @import grid
 #' @import plotly
 #' @rawNamespace import(shinyalert, except = runExample)
 #' @rawNamespace import(shinyBS, except = closeAlert)

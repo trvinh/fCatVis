@@ -2,7 +2,9 @@
 
 export(runFcatVis)
 import(data.table)
+import(dplyr, except = c(last, first, between, combine))
 import(ggplot2, except = last_plot)
+import(grid)
 import(gridExtra)
 import(plotly)
 import(shinyBS, except = closeAlert)

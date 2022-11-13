@@ -12,8 +12,8 @@ Depends: R (>= 4.2.0)
 Encoding: UTF-8
 biocViews: Software, Visualization, DataRepresentation, MultipleComparison, FunctionalPrediction
 Imports:
-    data.table, ggplot2, gridExtra, shiny, shinyBS, shinyFiles, shinyjs, 
-    shinyalert, shinythemes, stringr, plotly
-RoxygenNote: 7.2.0
+    data.table, dplyr, ggplot2, grid, gridExtra, shiny, shinyBS, shinyFiles, 
+    shinyjs, shinyalert, shinythemes, stringr, plotly
+RoxygenNote: 7.2.2
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr

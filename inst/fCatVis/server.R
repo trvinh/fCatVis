@@ -124,7 +124,7 @@ shinyServer(function(input, output, session) {
         if (input$inputType == "File") {
             outDf <- getReportDf(getFcatFile(), input$specID)
         } else if (input$inputType == "Folder") {
-            allFiles <- list.files(getFcatDir(), pattern = ".txt")
+            allFiles <- list.files(getFcatDir(), pattern=".report_summary.txt")
             fcatFile <- paste0(
                 getFcatDir(), "/", 
                 allFiles[grep(paste0("^", input$specID), allFiles)]
@@ -147,4 +147,91 @@ shinyServer(function(input, output, session) {
         data = reportDf,
         diffDf = diffDf
     )
+    
+    # PhyloProfile plot ########################################################
+    pathToPhyloprofile <- paste0(
+        path.package("PhyloProfile"), "/PhyloProfile"
+    )
+    nameFullFile <- paste0(
+        pathToPhyloprofile, "/data/preProcessedTaxonomy.txt"
+    )
+    nameFullDf <- data.table::fread(nameFullFile, select = c(1:3))
+    
+    profileData <- eventReactive(input$doPP, {
+        req(input$doPlot)
+        req(input$specID)
+        
+        assessmentDf <- diffDf()
+        ppDf <- list()
+        geneIDs <- NULL
+        if (nrow(assessmentDf) > 0) {
+            ### get genes based on assessments
+            allReportFiles <- list.files(
+                getFcatDir(), pattern=".report_full.txt"
+            )
+            reportFile <- paste0(
+                getFcatDir(), "/", 
+                allReportFiles[grep(paste0("^", input$specID), allReportFiles)]
+            )
+            geneIDs_mode1 <- getGroupsByAssessment(
+                reportFile, levels(as.factor(assessmentDf$type)), "mode_1"
+            )
+            geneIDs_mode2 <- getGroupsByAssessment(
+                reportFile, levels(as.factor(assessmentDf$type)), "mode_2"
+            )
+            geneIDs_mode3 <- getGroupsByAssessment(
+                reportFile, levels(as.factor(assessmentDf$type)), "mode_3"
+            )
+            geneIDs <- c(geneIDs_mode1, geneIDs_mode2, geneIDs_mode3)
+            
+            if (length(geneIDs) > 0) {
+                ### get profile data
+                allPPFiles <- list.files(getFcatDir(), pattern=".phyloprofile")
+                profileFile_mode1 <- paste0(
+                    getFcatDir(), "/", 
+                    allPPFiles[
+                        grep(paste0("^", input$specID, "_mode1"), allPPFiles)
+                    ]
+                )
+                ppDf_mode1 <- getProfileDf(profileFile_mode1, geneIDs_mode1)
+                profileFile_mode2 <- paste0(
+                    getFcatDir(), "/", 
+                    allPPFiles[
+                        grep(paste0("^", input$specID, "_mode2"), allPPFiles)
+                    ]
+                )
+                ppDf_mode2 <- getProfileDf(profileFile_mode2, geneIDs_mode2)
+                profileFile_mode3 <- paste0(
+                    getFcatDir(), "/", 
+                    allPPFiles[
+                        grep(paste0("^", input$specID, "_mode3"), allPPFiles)
+                    ]
+                )
+                ppDf_mode3 <- getProfileDf(profileFile_mode3, geneIDs_mode3)
+                ppDf <- list(ppDf_mode1, ppDf_mode2, ppDf_mode3)
+            }
+        }
+        
+        if (length(ppDf) == 0) {
+            return(NULL)
+        } else {
+            ### get domain data
+            allDomainFiles <- list.files(
+                getFcatDir(), pattern=".domains"
+            )
+            domainFile <- paste0(
+                getFcatDir(), "/", 
+                allDomainFiles[grep(paste0("^", input$specID), allDomainFiles)]
+            )
+            domainDf <- getDomainDf(domainFile, geneIDs)
+            return(list(ppDf, domainDf))
+        }
+    })
+    
+    output$test.ui <- renderUI({
+        ll <- profileData()
+        return(ll[2])
+    })
+    
+    callModule(phyloprofileLite, "phyloprofileLite", profileData)
 })

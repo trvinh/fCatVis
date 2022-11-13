@@ -37,6 +37,34 @@ createTextSize <- function(id, title, value, width) {
                  width = width)
 }
 
+createSliderCutoff <- function(id, title, start, stop, varID){
+    if (is.null(varID)) return()
+    if (varID == "") {
+        sliderInput(id, title,
+                    min = 1,
+                    max = 1,
+                    step = 0.025,
+                    value = 1,
+                    width = 200)
+    } else {
+        sliderInput(id, title,
+                    min = 0,
+                    max = 1,
+                    step = 0.025,
+                    value = c(start, stop),
+                    width = 200)
+    }
+}
+
+updateSliderCutoff <- function(session, id, title, newVar, varID){
+    if (is.null(varID) || varID == "") return()
+    updateSliderInput(session, id, title,
+                      value = newVar,
+                      min = 0,
+                      max = 1,
+                      step = 0.025)
+}
+
 reverse_legend_labels <- function(plotly_plot) {
     n_labels <- length(plotly_plot$x$data)
     plotly_plot$x$data[1:n_labels] <- plotly_plot$x$data[n_labels:1]
@@ -148,17 +176,59 @@ filterSpec <- function (inputFiles = NULL, cutoff = 10, minDiffCount = 10) {
 }
 
 
-getReportDf <- function (inputFile = NULL, specID = NULL) {
-    if (is.null(inputFile)) stop("No infile given!")
+getReportDf <- function (reportSummary = NULL, specID = NULL) {
+    if (is.null(reportSummary)) stop("No infile given!")
     if (is.null(specID)) stop("Species not specified!")
     df <- read.csv(
-        inputFile, header = TRUE, sep = "\t", stringsAsFactors = FALSE
+        reportSummary, header = TRUE, sep = "\t", stringsAsFactors = FALSE
     )
     return(df[grep(paste0("^", specID), df$genomeID),])
 }
 
 
+getGroupsByAssessment <- function (
+        reportFull = NULL, assessments = NULL, mode = NULL
+) {
+    if (is.null(reportFull)) stop("No infile given!")
+    if (is.null(assessments)) stop("Assessments not specified!")
+    if (is.null(mode)) stop("Assessment mode not specified!")
+    df <- read.csv(
+        reportFull, header = TRUE, sep = "\t", stringsAsFactors = FALSE
+    )
+    if ("duplicated" %in% assessments) {
+        assessments <- c(
+            assessments, "duplicated (similar)", "duplicated (dissimilar)",
+            "duplicated (complete)", "duplicated (fragmented)"
+        )
+    }
+    assessments <- c("missing", "duplicated")
+    selectedDf <- df[, c("groupID", mode)] %>% 
+        filter_all(any_vars(. %in% assessments))
+    return(levels(as.factor(selectedDf$groupID)))
+}
 
 
+getProfileDf <- function (profileFile = NULL, geneIDs = NULL) {
+    if (is.null(profileFile)) stop("No infile given!")
+    if (is.null(geneIDs)) stop("No gene ID list specified!")
+    
+    df <- read.csv(
+        profileFile, header = TRUE, sep = "\t", stringsAsFactors = FALSE
+    )
+    return(df[df$geneID %in% geneIDs,])
+}
 
 
+getDomainDf <- function (domainFile = NULL, geneIDs = NULL) {
+    if (is.null(domainFile)) stop("No infile given!")
+    if (is.null(geneIDs)) stop("No gene ID list specified!")
+    
+    domainDf <- PhyloProfile::parseDomainInput(NULL, domainFile, "file")
+    domainDf[c("geneID", "refID")] <- str_split_fixed(domainDf$seedID, '#', 2)
+    selectedDf <- domainDf[
+        domainDf$geneID %in% geneIDs, 
+        !(names(domainDf) %in% c("geneID", "refID"))
+    ]
+    return(selectedDf)
+    
+}
