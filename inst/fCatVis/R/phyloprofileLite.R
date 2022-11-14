@@ -70,6 +70,31 @@ phyloprofileLiteUI <- function(id) {
                 hr(),
                 
                 uiOutput(ns("totalGeneNumber.ui")),
+                column(
+                    6,
+                    numericInput(
+                        ns("stIndex"),
+                        "Show from:",
+                        min = 1,
+                        max = 1600,
+                        value = 1,
+                        width = 100
+                    ),
+                    style = "padding:0px;"
+                ),
+                
+                column(
+                    6,
+                    numericInput(
+                        ns("endIndex"),
+                        "...to:",
+                        min = 1,
+                        max = 1600,
+                        value = 1000,
+                        width = 100
+                    ),
+                    style = "padding:0px;"
+                ),
                 hr(),
 
                 conditionalPanel(
@@ -83,6 +108,12 @@ phyloprofileLiteUI <- function(id) {
                         type = "action",
                         style = "success",
                         disabled = FALSE
+                    ),
+                    bsButton(
+                        ns("updateBtn"),
+                        "Update plot",
+                        style = "warning",
+                        icon("sync")
                     )
                 )
             ),
@@ -327,6 +358,14 @@ phyloprofileLite <- function(input, output, session, profileData) {
             }
             
             longDataframe <- inputDf[!duplicated(inputDf),]
+            # update number of genes to plot based on input
+            if (nlevels(as.factor(longDataframe$geneID)) <= 1500) {
+                updateNumericInput(
+                    session, 
+                    "endIndex", value = nlevels(as.factor(longDataframe$geneID))
+                )
+            }
+            # return
             return(longDataframe)
         })
     })
@@ -570,8 +609,21 @@ phyloprofileLite <- function(input, output, session, profileData) {
         req(v$doPlot)
         longDataframe <- getMainInput()
         req(longDataframe)
+        # isolate start and end gene index
+        # input$updateBtn
+        # if (input$autoUpdate == TRUE) {
+            startIndex <- input$stIndex
+            endIndex <- input$endIndex
+        # } else {
+        #     startIndex <- isolate(input$stIndex)
+        #     endIndex <- isolate(input$endIndex)
+        # }
+        if (is.na(endIndex)) endIndex <- 1000
+        
         withProgress(message = 'Subseting data...', value = 0.5, {
-            data <- longDataframe
+            # data <- longDataframe
+            subsetID <- levels(as.factor(longDataframe$geneID))[startIndex:endIndex]
+            data <- longDataframe[longDataframe$geneID %in% subsetID, ]
             
             if (ncol(data) < 5) {
                 for (i in seq_len(5 - ncol(data))) {

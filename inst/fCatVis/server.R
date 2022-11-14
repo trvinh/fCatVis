@@ -87,13 +87,76 @@ shinyServer(function(input, output, session) {
     })
     
     # render species IDs =======================================================
+    diffFullReport <- reactive({
+        req(getFcatDir())
+        withProgress(message = 'Parsing reports...', value = 0.5, {
+            # get full report files
+            fullReports <- list.files(getFcatDir(), pattern=".report_full.txt")
+            fullReportsFiles <- paste0(getFcatDir(), "/", fullReports)
+            # get only groups that have diff. assessments
+            diffList <- lapply(fullReportsFiles, function (x) getDiffReport(x))
+            return(do.call(rbind, diffList[!is.null(diffList)]))
+        })
+    })
+    
     filteredSpecDf <- reactive({
         req(input$filter)
-        req(getFcatDir())
         req(input$diffCutoffPercent)
-        files <- list.files(getFcatDir(), pattern = ".report_summary.txt")
-        fullFiles <- paste0(getFcatDir(), "/", files)
-        return(filterSpec(fullFiles, input$diffCutoffPercent, input$diffCutoff))
+        req(input$diffCutoff)
+        
+        # get groups different in missing assessment
+        summaryReports <- list.files(getFcatDir(), pattern = ".report_summary.txt")
+        summaryReportsFiles <- paste0(getFcatDir(), "/", summaryReports)
+        summaryDf <- do.call(
+            rbind, lapply(
+                summaryReportsFiles, function(i){
+                    read.csv(i, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+                }
+            )
+        )
+        summaryDf$spec <- str_split_fixed(summaryDf$genomeID, "@", 2)[,1]
+        missingDf <- getDiffMissing(summaryDf, input$diffCutoffPercent, input$diffCutoff)
+
+        # get groups different in the assessments of found orthologs
+        diffDf <- diffFullReport()
+        diffDf$specName <- str_split_fixed(diffDf$spec, "@", 3)[,1]
+        diffDf <- diffDf[,c("groupID", "specName")]
+        countDf <- diffDf[!duplicated(diffDf),] %>% count(specName)
+        totalDf <- summaryDf[,c("total", "spec")]
+        totalDf <- totalDf[!duplicated(totalDf),]
+        colnames(totalDf) <- c("total", "specName")
+        mergedCountDf <- merge(countDf, totalDf,  by = "specName")
+        mergedCountDf$diff <- round((mergedCountDf$n/mergedCountDf$total)*100,0)
+        filteredDf <- mergedCountDf[
+            mergedCountDf$diff >= input$diffCutoffPercent & mergedCountDf$n >= input$diffCutoff, 
+            c("specName", "diff")
+        ]
+        filteredDf$type <- "found orthologs"
+        colnames(filteredDf) <- c("spec", "diff", "type")
+
+        
+        # print(head(countDf))
+        # print(diffDf[diffDf$specName == "ARATH",])
+        # print(head(summaryDf))
+        
+        # # count assessments for 4 modes
+        # mode1Df <- diffDf %>% count(spec, mode1)
+        # mode2Df <- diffDf %>% count(spec, mode2)
+        # mode3Df <- diffDf %>% count(spec, mode3)
+        # mode4Df <- diffDf %>% count(spec, mode4)
+        # # get candidates for each mode
+        # diffMode1 <- compareAssessment(mode1Df, input$diffCutoffPercent, input$diffCutoff, "mode1")
+        # diffMode2 <- compareAssessment(mode2Df, input$diffCutoffPercent, input$diffCutoff, "mode2")
+        # diffMode3 <- compareAssessment(mode3Df, input$diffCutoffPercent, input$diffCutoff, "mode3")
+        # diffMode4 <- compareAssessment(mode4Df, input$diffCutoffPercent, input$diffCutoff, "mode4")
+        # diffMode4$type[diffMode4$type == "complete"] <- "similar"
+        # diffMode4$type[diffMode4$type == "fragmented"] <- "dissimilar"
+        # diffAll <- rbind(diffMode1, diffMode2, diffMode3, diffMode4)
+        # finalDf <- aggregate(
+        #     diffAll$diff, by = list(spec = diffAll$spec, type = diffAll$type), max
+        # )
+        # colnames(finalDf) <- c("spec", "type", "diff")
+        return(rbind(missingDf, filteredDf[, c("spec", "diff", "type")]))
     })
     
     output$specID.ui <- renderUI({
@@ -161,28 +224,50 @@ shinyServer(function(input, output, session) {
         req(input$doPlot)
         req(input$specID)
         
-        assessmentDf <- diffDf()
+        # assessmentDf <- diffDf()
+        diffDf <- diffFullReport()
+        diffDf$specName <- str_split_fixed(diffDf$spec, "@", 3)[,1]
+        selectedDiffDf <- diffDf[diffDf$specName == input$specID,]
         ppDf <- list()
-        geneIDs <- NULL
-        if (nrow(assessmentDf) > 0) {
-            ### get genes based on assessments
-            allReportFiles <- list.files(
-                getFcatDir(), pattern=".report_full.txt"
-            )
-            reportFile <- paste0(
-                getFcatDir(), "/", 
-                allReportFiles[grep(paste0("^", input$specID), allReportFiles)]
-            )
-            geneIDs_mode1 <- getGroupsByAssessment(
-                reportFile, levels(as.factor(assessmentDf$type)), "mode_1"
-            )
-            geneIDs_mode2 <- getGroupsByAssessment(
-                reportFile, levels(as.factor(assessmentDf$type)), "mode_2"
-            )
-            geneIDs_mode3 <- getGroupsByAssessment(
-                reportFile, levels(as.factor(assessmentDf$type)), "mode_3"
-            )
+
+        if (nrow(selectedDiffDf) > 0) {
+            # ### get genes based on assessments
+            # allReportFiles <- list.files(
+            #     getFcatDir(), pattern=".report_full.txt"
+            # )
+            # reportFile <- paste0(
+            #     getFcatDir(), "/", 
+            #     allReportFiles[grep(paste0("^", input$specID), allReportFiles)]
+            # )
+            # geneIDs_mode1 <- getGroupsByAssessment(
+            #     reportFile, levels(as.factor(assessmentDf$type)), "mode_1"
+            # )
+            # geneIDs_mode2 <- getGroupsByAssessment(
+            #     reportFile, levels(as.factor(assessmentDf$type)), "mode_2"
+            # )
+            # geneIDs_mode3 <- getGroupsByAssessment(
+            #     reportFile, levels(as.factor(assessmentDf$type)), "mode_3"
+            # )
+            # geneIDs <- c(geneIDs_mode1, geneIDs_mode2, geneIDs_mode3)
+            
+            s_mode1 <- selectedDiffDf[,c("groupID", "mode1", "spec")]
+            count_mode1 <- s_mode1 %>% count(groupID, mode1)
+            geneIDs_mode1 <- count_mode1[count_mode1$n < nlevels(as.factor(s_mode1$spec)),]$groupID
+            
+            s_mode2 <- selectedDiffDf[,c("groupID", "mode2", "spec")]
+            count_mode2 <- s_mode2 %>% count(groupID, mode2)
+            geneIDs_mode2 <- count_mode2[count_mode2$n < nlevels(as.factor(s_mode2$spec)),]$groupID
+
+            s_mode3 <- selectedDiffDf[,c("groupID", "mode3", "spec")]
+            count_mode3 <- s_mode3 %>% count(groupID, mode3)
+            geneIDs_mode3 <- count_mode3[count_mode3$n < nlevels(as.factor(s_mode3$spec)),]$groupID
+
+            s_mode4 <- selectedDiffDf[,c("groupID", "mode4", "spec")]
+            count_mode4 <- s_mode4 %>% count(groupID, mode4)
+            geneIDs_mode4 <- count_mode4[count_mode4$n < nlevels(as.factor(s_mode4$spec)),]$groupID
+            
             geneIDs <- c(geneIDs_mode1, geneIDs_mode2, geneIDs_mode3)
+            geneIDs <- unique(geneIDs)
             
             if (length(geneIDs) > 0) {
                 ### get profile data

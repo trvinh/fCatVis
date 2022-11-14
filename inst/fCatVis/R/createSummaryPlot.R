@@ -67,24 +67,24 @@ createSummaryPlotUI <- function(id) {
         tableOutput(ns("diff.table")),
         br(),
         
-        column(
-            6,
-            radioButtons(
-                ns("tableFilter"),
-                "Show",
-                choices = c("All", "Only different assessments"),
-                selected = "All", inline = TRUE
-            )
-        ),
-        column(
-            6,
+        # column(
+        #     6,
+        #     radioButtons(
+        #         ns("tableFilter"),
+        #         "Show",
+        #         choices = c("All", "Only different assessments"),
+        #         selected = "All", inline = TRUE
+        #     )
+        # ),
+        # column(
+        #     6,
             radioButtons(
                 ns("tableType"),
                 "Type",
                 choices = c("Count", "Percentage"),
                 selected = "Count", inline = TRUE
-            )
-        ),
+            ),
+        # ),
         tableOutput(ns("summary.table")),
 
         tags$head(
@@ -163,11 +163,12 @@ createSummaryPlot <- function(
     
     output$diff.table <- renderTable({
         df <- diffDf()
+        df$diff <- as.integer(df$diff)
         colnames(df) <- c(
-            "Species", "Difference between datasets (%)", "Assessment type"
+            "Species", "Difference (%)", "In"
         )
         if (nrow(df) > 0) {
-            return(df[,c("Assessment type", "Difference between datasets (%)")])
+            return(df[,c("Difference (%)", "In")])
         } else {
             return(NULL)
         }
@@ -185,7 +186,7 @@ createSummaryPlot <- function(
                 "duplicated", "missing", "ignored", "total"
             )
         ]
-        selectedType <- unique(diffDf()$type)
+        # selectedType <- unique(diffDf()$type)
         
         if (input$tableType == "Percentage") {
             df$similar <- df$similar/df$found
@@ -197,13 +198,13 @@ createSummaryPlot <- function(
             df$total <- 1
         }
         
-        if (input$tableFilter == "All") {
-            return(df)
-        } else {
-            if (length(selectedType) > 0) {
-                return(df[, c("genomeID","mode", selectedType, "total")])
-            } else return(NULL)
-        }
+        # if (input$tableFilter == "All") {
+        return(df)
+        # } else {
+        #     if (length(selectedType) > 0) {
+        #         return(df[, c("genomeID","mode", selectedType, "total")])
+        #     } else return(NULL)
+        # }
     })
 }
 
